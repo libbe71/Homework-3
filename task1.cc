@@ -120,7 +120,14 @@ main(int argc, char* argv[])
 
         NetDeviceContainer csmaDevices2;
         csmaDevices2 = csma2.Install(csmaNodes2);
-
+        
+        InternetStackHelper stack;
+        stack.Install(I0.Get(1)); // n3
+        stack.Install(I2.Get(0)); // n4
+        stack.Install(I2.Get(1)); // n5
+        stack.Install(csmaNodes1); // n0, n1, n2
+        stack.Install(csmaNodes2); // n6, n7, n8
+        
         
 
     }

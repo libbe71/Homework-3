@@ -51,13 +51,11 @@ int
 main(int argc, char* argv[])
 {
 
+
     //bool verbose = true;
     uint32_t nCsma1 = 2;
     uint32_t nCsma2 = 2;
     uint32_t configuration = 0;
-
-    LogComponentEnable("1", LOG_INFO);
-    LogComponentEnable("2", LOG_INFO);
 
     CommandLine cmd(__FILE__);
     cmd.AddValue("configuration", "type: 0, 1 or 2", configuration);
@@ -120,17 +118,70 @@ main(int argc, char* argv[])
 
         NetDeviceContainer csmaDevices2;
         csmaDevices2 = csma2.Install(csmaNodes2);
-        
+
         InternetStackHelper stack;
         stack.Install(I0.Get(1)); // n3
         stack.Install(I2.Get(0)); // n4
         stack.Install(I2.Get(1)); // n5
         stack.Install(csmaNodes1); // n0, n1, n2
         stack.Install(csmaNodes2); // n6, n7, n8
-        
-        
+
+        Ipv4AddressHelper address;
+
+        address.SetBase("10.0.1.0", "255.255.255.252");
+        Ipv4InterfaceContainer p2pInterfaces1;
+        p2pInterfaces1 = address.Assign(I0D);
+
+        address.SetBase("10.0.2.0", "255.255.255.252");
+        Ipv4InterfaceContainer p2pInterfaces2;
+        p2pInterfaces2 = address.Assign(I1D);
+
+        address.SetBase("10.0.3.0", "255.255.255.252");
+        Ipv4InterfaceContainer p2pInterfaces3;
+        p2pInterfaces3 = address.Assign(I2D);
+
+        address.SetBase("10.0.4.0", "255.255.255.252");
+        Ipv4InterfaceContainer p2pInterfaces4;
+        p2pInterfaces4 = address.Assign(I3D);
+
+        address.SetBase("192.138.1.0", "255.255.255.0");
+        Ipv4InterfaceContainer csmaInterfaces1;
+        csmaInterfaces1 = address.Assign(csmaDevices1);
+
+        address.SetBase("192.138.2.0", "255.255.255.0");
+        Ipv4InterfaceContainer csmaInterfaces2;
+        csmaInterfaces2 = address.Assign(csmaDevices2);
+        if(configuration == 0){
+            Config::SetDefault("ns3::OnOffApplication::PacketSize", UintegerValue(1500));
+            uint16_t sinkPort = 2400;
+            Address sinkAddress(InetSocketAddress(csmaInterfaces1.GetAddress(1), sinkPort));
+            PacketSinkHelper packetSinkHelper("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), sinkPort));
+            ApplicationContainer sinkApps = packetSinkHelper.Install(csmaNodes1.Get(2));
+            
+            sinkApps.Start(Seconds(0.));
+            sinkApps.Stop(Seconds(20.));
+
+
+
+            OnOffHelper onOffHelper("ns3::TcpSocketFactory", Address());
+            onOffHelper.SetAttribute("OnTime", StringValue("ns3::ConstantRandomVariable[Constant=1]"));
+            onOffHelper.SetAttribute("OffTime", StringValue("ns3::ConstantRandomVariable[Constant=0]"));
+
+            ApplicationContainer app;
+
+            AddressValue remoteAddress(InetSocketAddress(p2pInterfaces3.GetAddress(0), 2400));
+            onOffHelper.SetAttribute("Remote", remoteAddress);
+            app.Add(onOffHelper.Install(I2.Get(0)));
+
+            app.Start(Seconds(3.0));
+            app.Stop(Seconds(15.0));
+
+            I0123H.EnablePcap("aaaaaaa",I0D.Get(1), I0.Get(1));
+            //I0123H.EnablePcapAll("prova");
+        }
 
     }
+    Simulator::Stop(Seconds(20));
     Simulator::Run();
     Simulator::Destroy();
     return 0;

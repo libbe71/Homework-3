@@ -42,6 +42,7 @@
 //
 //p2p: I0, ..., I3
 //CSMA n0,n1,n2; n6,n7,n8
+// ./ns3 run "scratch/task1 --configuration=0"
 
 using namespace ns3;
 

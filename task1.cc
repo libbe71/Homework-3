@@ -42,7 +42,6 @@
 //
 //p2p: I0, ..., I3
 //CSMA n0,n1,n2; n6,n7,n8
-// ./ns3 run "scratch/task1 --configuration=0"
 
 using namespace ns3;
 
@@ -52,10 +51,9 @@ int
 main(int argc, char* argv[])
 {
 
-
+    LogComponentEnable("Task_1", LOG_LEVEL_INFO);
+    
     //bool verbose = true;
-    uint32_t nCsma1 = 2;
-    uint32_t nCsma2 = 2;
     uint32_t configuration = 0;
 
     CommandLine cmd(__FILE__);
@@ -66,34 +64,56 @@ main(int argc, char* argv[])
     if(configuration > 2 || configuration < 0) 
         printf("errore\n");
     else{
-         NodeContainer I0;
-         I0.Create(2); //index 0 = n1 index 1 = n3
+         
 
+        NodeContainer allNodes;
+        allNodes.Create(9); //index 0 = n0 //index 1 = n1 //index 2 = n2
+        //index 3 = n3 //index 4 = n4 //index 5 = n5 //index 6 = n6 
+        //index 7 = n7 //index 8 = n8 
 
-         NodeContainer I1;
-         I1.Add(I0.Get(1)); //index 0 n3
-         I1.Create(1); // index 1 = n6
+        NS_LOG_INFO("Create nodes.");
 
-         NodeContainer I2;
-         I2.Create(2); // index 0 = n4 index 1 = n5
+        NodeContainer I0;
+        I0.Add(allNodes.Get(1));
+        I0.Add(allNodes.Get(3));
 
-         NodeContainer I3;
-         I3.Add(I2.Get(1)); // index 0 n5
-         I3.Add(I1.Get(1)); // index 1 = n6
+        NodeContainer I1;
+        I1.Add(allNodes.Get(3));
+        I1.Add(allNodes.Get(6));
+
+        NodeContainer I2;
+        I2.Add(allNodes.Get(4));
+        I2.Add(allNodes.Get(5));
+
+        NodeContainer I3;
+        I3.Add(allNodes.Get(5));
+        I3.Add(allNodes.Get(6));
 
 
         NodeContainer csmaNodes1;
-        csmaNodes1.Add(I0.Get(0)); // index 0 = n1
-        csmaNodes1.Create(nCsma1); // index 1 = n0, index 2 = n2
+        csmaNodes1.Add(allNodes.Get(0));
+        csmaNodes1.Add(allNodes.Get(1));
+        csmaNodes1.Add(allNodes.Get(2));
 
         NodeContainer csmaNodes2;
-        csmaNodes2.Add(I1.Get(1)); // index 0 = n6
-        csmaNodes2.Create(nCsma2); // index 1 = n7, index 2 = n8
+        csmaNodes1.Add(allNodes.Get(6));
+        csmaNodes1.Add(allNodes.Get(7));
+        csmaNodes1.Add(allNodes.Get(8));
 
+        
+        NS_LOG_INFO("Create channels.");
+
+        //setup helpers
         PointToPointHelper I0123H;
         I0123H.SetDeviceAttribute("DataRate", StringValue("80Mbps"));
         I0123H.SetChannelAttribute("Delay", StringValue("5us"));
 
+        CsmaHelper csma1;
+        csma1.SetChannelAttribute("DataRate", StringValue("25Mbps"));
+        csma1.SetChannelAttribute("Delay", TimeValue(MicroSeconds(10)));
+
+
+        //setup net devices
         NetDeviceContainer I0D;
         I0D = I0123H.Install(I0);
     
@@ -106,9 +126,7 @@ main(int argc, char* argv[])
         NetDeviceContainer I3D;
         I3D = I0123H.Install(I3);
 
-        CsmaHelper csma1;
-        csma1.SetChannelAttribute("DataRate", StringValue("25Mbps"));
-        csma1.SetChannelAttribute("Delay", TimeValue(MicroSeconds(10)));
+       
 
         NetDeviceContainer csmaDevices1;
         csmaDevices1 = csma1.Install(csmaNodes1);
@@ -120,70 +138,92 @@ main(int argc, char* argv[])
         NetDeviceContainer csmaDevices2;
         csmaDevices2 = csma2.Install(csmaNodes2);
 
-        InternetStackHelper stack;
-        stack.Install(I0.Get(1)); // n3
-        stack.Install(I2.Get(0)); // n4
-        stack.Install(I2.Get(1)); // n5
-        stack.Install(csmaNodes1); // n0, n1, n2
-        stack.Install(csmaNodes2); // n6, n7, n8
+
+        //instaling interner stack
+        InternetStackHelper internet;
+        internet.Install(allNodes);
+
+        NS_LOG_INFO("Assign IP Addresses.");
 
         Ipv4AddressHelper address;
 
-        address.SetBase("10.0.1.0", "255.255.255.252");
-        Ipv4InterfaceContainer p2pInterfaces1;
-        p2pInterfaces1 = address.Assign(I0D);
+        address.SetBase("10.0.1.0", "/30", "0.0.0.1");
+        Ipv4InterfaceContainer I0Interfaces;
+        I0Interfaces = address.Assign(I0D);
 
-        address.SetBase("10.0.2.0", "255.255.255.252");
-        Ipv4InterfaceContainer p2pInterfaces2;
-        p2pInterfaces2 = address.Assign(I1D);
+        address.SetBase("10.0.2.0", "/30", "0.0.0.1");
+        Ipv4InterfaceContainer I1Interfaces;
+        I1Interfaces = address.Assign(I1D);
 
-        address.SetBase("10.0.3.0", "255.255.255.252");
-        Ipv4InterfaceContainer p2pInterfaces3;
-        p2pInterfaces3 = address.Assign(I2D);
+        address.SetBase("10.0.3.0", "/30", "0.0.0.1");
+        Ipv4InterfaceContainer I2Interfaces;
+        I2Interfaces = address.Assign(I2D);
 
-        address.SetBase("10.0.4.0", "255.255.255.252");
-        Ipv4InterfaceContainer p2pInterfaces4;
-        p2pInterfaces4 = address.Assign(I3D);
+        address.SetBase("10.0.4.0", "/30", "0.0.0.1");
+        Ipv4InterfaceContainer I3Interfaces;
+        I3Interfaces = address.Assign(I3D);
 
-        address.SetBase("192.138.1.0", "255.255.255.0");
+        address.SetBase("192.138.1.0", "/24", "0.0.0.1");
         Ipv4InterfaceContainer csmaInterfaces1;
         csmaInterfaces1 = address.Assign(csmaDevices1);
 
-        address.SetBase("192.138.2.0", "255.255.255.0");
+        
+        address.SetBase("192.138.2.0", "/24", "0.0.0.1");
         Ipv4InterfaceContainer csmaInterfaces2;
         csmaInterfaces2 = address.Assign(csmaDevices2);
         if(configuration == 0){
-            Config::SetDefault("ns3::OnOffApplication::PacketSize", UintegerValue(1500));
-            uint16_t sinkPort = 2400;
-            Address sinkAddress(InetSocketAddress(csmaInterfaces1.GetAddress(1), sinkPort));
-            PacketSinkHelper packetSinkHelper("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), sinkPort));
-            ApplicationContainer sinkApps = packetSinkHelper.Install(csmaNodes1.Get(2));
             
-            sinkApps.Start(Seconds(0.));
-            sinkApps.Stop(Seconds(20.));
+
+            NS_LOG_INFO("starting configuration 0");
+            //packet sink n2
+
+
+            NS_LOG_INFO("setup sink");
+            uint16_t sinkPort = 2400;
+            Address sinkLocalAddress (InetSocketAddress (Ipv4Address::GetAny (), sinkPort));
+            PacketSinkHelper sink("ns3::TcpSocketFactory", sinkLocalAddress);
+            ApplicationContainer sinkApps = sink.Install(allNodes.Get(2));
 
 
 
-            OnOffHelper onOffHelper("ns3::TcpSocketFactory", Address());
-            onOffHelper.SetAttribute("OnTime", StringValue("ns3::ConstantRandomVariable[Constant=1]"));
-            onOffHelper.SetAttribute("OffTime", StringValue("ns3::ConstantRandomVariable[Constant=0]"));
+            //TCP OnOff Client sul nodo n4
+           NS_LOG_INFO("setup onoff");
 
-            ApplicationContainer app;
-
-            AddressValue remoteAddress(InetSocketAddress(p2pInterfaces3.GetAddress(0), 2400));
+            OnOffHelper onOffHelper ("ns3::TcpSocketFactory", Address ());
+            onOffHelper.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
+            onOffHelper.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
+            onOffHelper.SetAttribute("PacketSize", UintegerValue(1500));
+            AddressValue remoteAddress(InetSocketAddress(csmaInterfaces1.GetAddress(2), sinkPort));
             onOffHelper.SetAttribute("Remote", remoteAddress);
-            app.Add(onOffHelper.Install(I2.Get(0)));
+            ApplicationContainer nodeApp = onOffHelper.Install (allNodes.Get(4));
+            nodeApp.Start (Seconds (3.0));
+            nodeApp.Stop (Seconds (15.0));
 
-            app.Start(Seconds(3.0));
-            app.Stop(Seconds(15.0));
 
-            I0123H.EnablePcap("aaaaaaa",I0D.Get(1), I0.Get(1));
-            //I0123H.EnablePcapAll("prova");
+            csma1.EnableAscii("task1-0-1.tr", allNodes.Get(2)->GetDevice(0),true);
+            I0123H.EnableAscii("task1-0-9.tr", allNodes.Get(4)->GetDevice(0),true);
+
+            //abilitazione pcap
+            //I0123H.EnablePcap("n3", allNodes.Get(2)->GetDevice(0),true); // Pcap su n3
+            //I0123H.EnablePcap("n5", allNodes.Get(4)->GetDevice(0),true); // Pcap su n5
+            //csma2.EnablePcap("n6", allNodes.Get(6)->GetDevice(0),true); // Pcap su n6
+            I0123H.EnablePcapAll("ciao");
+            csma1.EnablePcapAll("ciao1", true);
+            csma2.EnablePcapAll("ciao2", true);
+            //fine pcap
+
         }
 
     }
+   //Ipv4GlobalRoutingHelper::PopulateRoutingTables();
+
+    
     Simulator::Stop(Seconds(20));
-    Simulator::Run();
+    Simulator::Run(); 
+    
     Simulator::Destroy();
-    return 0;
+    
+	return 0;
+
+
 }
